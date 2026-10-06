@@ -6,6 +6,23 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+def parse_allowed_origins(raw: str | None) -> list[str]:
+    """Parse a comma separated ALLOWED_ORIGINS value into a list of origins.
+
+    Unset or empty gives an empty list, which leaves CORS off. A trailing slash
+    is dropped, because a browser sends the origin without one.
+
+    Args:
+        raw: The raw environment value, or None when it is not set.
+
+    Returns:
+        list[str]: The explicit origins, in the order given.
+    """
+    if not raw:
+        return []
+    return [part.strip().rstrip("/") for part in raw.split(",") if part.strip()]
+
+
 class Settings:
     """Applicatieconfiguratie voor de Presidio-NL API.
 
@@ -58,8 +75,11 @@ class Settings:
     DEFAULT_LANGUAGE = os.getenv("DEFAULT_LANGUAGE", "nl")
     DEFAULT_SPACY_MODEL = os.getenv("DEFAULT_SPACY_MODEL", "nl_core_news_lg")
 
-    # CORS: komma-gescheiden lijst van toegestane origins. "*" = alle origins.
-    ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
+    # CORS is off unless a deployment names its browser origins (comma
+    # separated). The known callers, OpenRegister directly or through the
+    # AppAPI proxy, are server to server and send no Origin header, so they
+    # need no CORS at all.
+    ALLOWED_ORIGINS: list[str] = parse_allowed_origins(os.getenv("ALLOWED_ORIGINS"))
 
 
 settings: Settings = Settings()
